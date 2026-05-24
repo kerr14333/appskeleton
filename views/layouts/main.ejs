@@ -1,0 +1,10 @@
+<%- include('../partials/header', { appName: appName }) %>
+
+<div class="d-flex">
+  <%- include('../partials/sidebar', { page: page }) %>
+  <div class="flex-grow-1 p-4">
+    <%- body %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

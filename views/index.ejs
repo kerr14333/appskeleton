@@ -1,0 +1,82 @@
+﻿<p id="seriesHint" class="text-muted small fst-italic mb-2">Select a series from the sidebar.</p>
+
+<ul class="nav nav-tabs mb-3" id="mainTabs">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-target="#paneChart" data-bs-toggle="tab">Chart</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-target="#paneData" data-bs-toggle="tab">Data</button>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="paneChart">
+    <div id="chart" style="height: 460px;"></div>
+  </div>
+
+  <div class="tab-pane fade" id="paneData">
+    <div id="dataTable"></div>
+  </div>
+</div>
+
+<script>
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let table = null;
+
+  function loadSeriesChart(id) {
+    fetch(`/api/series/${encodeURIComponent(id)}`)
+      .then(r => r.json())
+      .then(({ series_title, data_type_text, data }) => {
+        document.getElementById('seriesHint').textContent = series_title;
+
+        // Chart
+        const x = data.map(d => d.date);
+        const y = data.map(d => d.value);
+
+        Plotly.react('chart', [{
+          x,
+          y,
+          type: 'scatter',
+          mode: 'lines',
+          line: { color: '#0d6efd', width: 1.5 },
+          name: series_title,
+        }], {
+          title: { text: series_title, font: { size: 14 } },
+          xaxis: { title: 'Date', type: 'date' },
+          yaxis: { title: data_type_text },
+          margin: { t: 50, r: 20, b: 60, l: 70 },
+          hovermode: 'x unified',
+        }, { responsive: true });
+
+        // Tabulator data
+        const tableData = data.map(row => {
+          const [year, monthNum] = row.date.split('-');
+          return {
+            year: parseInt(year),
+            month: MONTHS[parseInt(monthNum, 10) - 1],
+            value: row.value,
+          };
+        });
+
+        if (table) {
+          table.replaceData(tableData);
+        } else {
+          table = new Tabulator('#dataTable', {
+            data: tableData,
+            height: 'calc(100vh - 200px)',
+            layout: 'fitColumns',
+            columns: [
+              { title: 'Year',  field: 'year',  width: 100 },
+              { title: 'Month', field: 'month', width: 100 },
+              { title: data_type_text, field: 'value', hozAlign: 'right', formatter: 'money', formatterParams: { thousand: ',', precision: 1, symbol: '' } },
+            ],
+          });
+        }
+      });
+  }
+
+  // Resize Plotly when switching to the Chart tab
+  document.querySelector('[data-bs-target="#paneChart"]').addEventListener('shown.bs.tab', () => {
+    Plotly.Plots.resize('chart');
+  });
+</script>

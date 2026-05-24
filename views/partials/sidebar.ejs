@@ -1,0 +1,29 @@
+<div id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary" style="width: 280px; min-height: 100vh;">
+  <div>
+    <label for="seriesSelect" class="form-label fw-semibold small">Series</label>
+    <select id="seriesSelect" class="form-select form-select-sm">
+      <option value="">— select a series —</option>
+    </select>
+  </div>
+</div>
+
+<script>
+  const seriesSelect = document.getElementById('seriesSelect');
+
+  fetch('/api/series')
+    .then(r => r.json())
+    .then(series => {
+      series.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.series_id;
+        opt.textContent = `${s.series_id} — ${s.series_title}`;
+        seriesSelect.appendChild(opt);
+      });
+    });
+
+  seriesSelect.addEventListener('change', () => {
+    const id = seriesSelect.value;
+    if (!id) return;
+    if (typeof loadSeriesChart === 'function') loadSeriesChart(id);
+  });
+</script>
