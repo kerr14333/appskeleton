@@ -1,9 +1,10 @@
-# Dependencies
-node_modules/
-
-# Data files (download separately)
-*.txt
-*.db
-
-# Environment
+# Dependencies 
+node_modules/ 
+ 
+# Data files (download separately) 
+*.txt 
+*.db 
+*.parquet 
+ 
+# Environment 
 .env

@@ -1,11 +1,10 @@
 
 
 library(tidyverse)
-library(DBI)
-library(RSQLite)
+library(arrow)
 
 
-# Read the data file
+# ── CES data ──────────────────────────────────────────────────────────────────
 df <- read_tsv(
   file = "sm.data.39a.Pennsylvania.txt",
   col_types = cols(
@@ -18,20 +17,27 @@ df <- read_tsv(
 ) |>
   mutate(
     series_id = str_trim(series_id),
-    # Convert period (M01-M13) to month integer; M13 is annual average
-    month = as.integer(str_remove(period, "^M"))
+    month     = as.integer(str_remove(period, "^M"))
   )
 
-# Connect (creates file if it doesn't exist)
-con <- dbConnect(RSQLite::SQLite(), "ces.db")
+write_parquet(df, "ces_data.parquet")
+message("ces_data.parquet written — ", nrow(df), " rows")
 
-# Write table, replacing if it already exists
-dbWriteTable(con, "ces_data", df, overwrite = TRUE)
+# ── Series info ───────────────────────────────────────────────────────────────
+series     <- read_tsv("sm.series.txt",     col_types = cols(.default = col_character())) |> mutate(across(everything(), str_trim))
+supersector <- read_tsv("sm.supersector.txt", col_types = cols(.default = col_character())) |> mutate(across(everything(), str_trim))
+industry   <- read_tsv("sm.industry.txt",   col_types = cols(.default = col_character())) |> mutate(across(everything(), str_trim))
+state      <- read_tsv("sm.state.txt",      col_types = cols(.default = col_character())) |> mutate(across(everything(), str_trim))
+data_type  <- read_tsv("sm.data_type.txt",  col_types = cols(.default = col_character())) |> mutate(across(everything(), str_trim))
 
-# Add an index on series_id for fast lookups
-dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_series_id ON ces_data(series_id)")
-dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_year ON ces_data(year)")
+series_info <- series |>
+  left_join(state,       join_by(state_code)) |>
+  left_join(supersector, join_by(supersector_code)) |>
+  left_join(industry,    join_by(industry_code)) |>
+  left_join(data_type,   join_by(data_type_code)) |>
+  mutate(
+    series_title = str_glue("{industry_name} — {state_name} ({data_type_text})")
+  )
 
-dbDisconnect(con)
-
-message("Done — ces.db written with ", nrow(df), " rows.")
+write_parquet(series_info, "series_info.parquet")
+message("series_info.parquet written — ", nrow(series_info), " rows")
